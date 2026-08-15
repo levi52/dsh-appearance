@@ -52,6 +52,15 @@ npm run install-plugin
 # 2. Restart dsh web
 ```
 
+### Uninstall
+
+```bash
+npm run uninstall-plugin
+#    Removes the bundle and cleans the gateway whitelist. Your user data (the
+#    ui-appearance section of settings.yaml and the wallpapers/ directory) is
+#    kept — delete it manually if you want it gone.
+```
+
 > Client-only changes (themes, fonts, wallpaper settings, …) only need a **hard browser refresh**; host-side changes (schema, routes) need a restart.
 
 ## Settings UI

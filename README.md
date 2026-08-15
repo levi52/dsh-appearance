@@ -49,6 +49,14 @@ npm run install-plugin
 # 2. 重启 dsh web
 ```
 
+### 卸载
+
+```bash
+npm run uninstall-plugin
+#    移除 bundle 并清理网关白名单；用户数据（settings.yaml 的 ui-appearance
+#    段与 wallpapers/ 目录）会保留，如需彻底清除请手动删除。
+```
+
 > 纯客户端改动（主题色、字体、壁纸设置等）只需**强制刷新浏览器**；宿主侧改动（schema、路由）需要重启。
 
 ## 界面说明

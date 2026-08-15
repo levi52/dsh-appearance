@@ -7,11 +7,12 @@
  * array; a namespace absent there answers `settings-not-exposed` even though
  * its owning plugin registered it. This script idempotently adds
  * `"ui-appearance"` to that array so the plugin's settings work out of the
- * box.
+ * box (or removes it again with --remove).
  *
  * Run manually after installing the plugin (local `link:` installs do not
  * trigger lifecycle scripts):
- *   npm run fix-whitelist
+ *   npm run fix-whitelist            # add (idempotent)
+ *   npm run fix-whitelist -- --remove # remove (idempotent)
  *
  * Also wired as `postinstall` for registry/npm-install contexts.
  *
@@ -25,6 +26,8 @@ import { homedir } from "node:os";
 
 const NS = '"ui-appearance"';
 const MARKER = "const WEB_SETTINGS_NAMESPACES = [";
+const REMOVE = process.argv.includes("--remove");
+const NS_LINE = /^\s*"ui-appearance",?\s*$/;
 
 /** Resolve $DSH_HOME (or the user's home fallback). */
 function dshHome() {
@@ -72,35 +75,70 @@ if (!target) {
 const source = readFileSync(target, "utf8");
 const markerIndex = source.indexOf(MARKER);
 if (markerIndex === -1) {
-	fail(`未找到 ${MARKER}（网关文件结构可能已变化），请手动添加 ${NS} 到 WEB_SETTINGS_NAMESPACES 数组。`);
+	const verb = REMOVE ? "移除" : "添加";
+	fail(`未找到 ${MARKER}（网关文件结构可能已变化），请手动${verb} ${NS} ${REMOVE ? "出" : "到"} WEB_SETTINGS_NAMESPACES 数组。`);
 }
 // MARKER ends with the array's opening `[`, so the first `[` from the marker
 // start IS the array we want (not some later bracket elsewhere in the file).
 const arrayOpen = source.indexOf("[", markerIndex);
 const arrayClose = source.indexOf("];", arrayOpen);
 if (arrayOpen === -1 || arrayClose === -1) {
-	fail("未找到 WEB_SETTINGS_NAMESPACES 数组边界，文件结构异常，请手动添加 " + NS);
+	const verb = REMOVE ? "移除" : "添加";
+	fail(`未找到 WEB_SETTINGS_NAMESPACES 数组边界，文件结构异常，请手动${verb} ${NS} ${REMOVE ? "出" : "到"} 数组。`);
 }
 const arrayBody = source.slice(arrayOpen, arrayClose + 1);
-if (arrayBody.includes(NS)) {
-	console.log(`[dsh-appearance] 白名单已包含 ${NS}，无需修改。`);
+const present = arrayBody.includes(NS);
+
+if (!REMOVE) {
+	if (present) {
+		console.log(`[dsh-appearance] 白名单已包含 ${NS}，无需修改。`);
+		process.exit(0);
+	}
+
+	// Insert before the array's closing `];`, reusing the last entry's indent.
+	// The previous last entry is the array's final item, so it has no trailing
+	// comma — append one before adding our new row, or the file becomes invalid JS.
+	// Note: `before` may end with the line break before `];`, so strip trailing
+	// whitespace first, or `lastIndexOf("\n")` would pick up that final newline.
+	const before = source.slice(0, arrayClose);
+	const after = source.slice(arrayClose);
+	const trimmedBefore = before.replace(/\s+$/, "");
+	const lineStart = trimmedBefore.lastIndexOf("\n") + 1;
+	const lastLine = trimmedBefore.slice(lineStart);
+	const indentMatch = /^(\s*)/.exec(lastLine);
+	const indent = (indentMatch && indentMatch[1]) || "\t";
+	const lastLineWithComma = lastLine.endsWith(",") ? lastLine : `${lastLine},`;
+	const rewritten = `${trimmedBefore.slice(0, lineStart)}${lastLineWithComma}\n${indent}${NS},\n${after}`;
+	writeFileSync(target, rewritten);
+	console.log(`[dsh-appearance] 已在 WEB_SETTINGS_NAMESPACES 中添加 ${NS} → ${target}`);
+	console.log("[dsh-appearance] 请重启 dsh web 使白名单生效。");
 	process.exit(0);
 }
 
-// Insert before the array's closing `];`, reusing the last entry's indent.
-// The previous last entry is the array's final item, so it has no trailing
-// comma — append one before adding our new row, or the file becomes invalid JS.
-// Note: `before` may end with the line break before `];`, so strip trailing
-// whitespace first, or `lastIndexOf("\n")` would pick up that final newline.
-const before = source.slice(0, arrayClose);
-const after = source.slice(arrayClose);
-const trimmedBefore = before.replace(/\s+$/, "");
-const lineStart = trimmedBefore.lastIndexOf("\n") + 1;
-const lastLine = trimmedBefore.slice(lineStart);
-const indentMatch = /^(\s*)/.exec(lastLine);
-const indent = (indentMatch && indentMatch[1]) || "\t";
-const lastLineWithComma = lastLine.endsWith(",") ? lastLine : `${lastLine},`;
-const rewritten = `${trimmedBefore.slice(0, lineStart)}${lastLineWithComma}\n${indent}${NS},\n${after}`;
+/* ---- remove mode ---- */
+if (!present) {
+	console.log(`[dsh-appearance] 白名单不含 ${NS}，无需修改。`);
+	process.exit(0);
+}
+
+// Drop the ui-appearance line, then clean up: if it was the last entry the
+// previous line may now carry a dangling trailing comma — JS allows trailing
+// commas, but keep the file tidy by stripping it when present. Only do this
+// when the removed line was the array's final element.
+const lines = arrayBody.split("\n");
+// Find the last content line (skipping the closing `]` and blank lines).
+let lastContentIdx = lines.length - 1;
+while (lastContentIdx >= 0 && /^\s*\]?\s*$/.test(lines[lastContentIdx])) lastContentIdx--;
+const removedLast = lastContentIdx >= 0 && NS_LINE.test(lines[lastContentIdx]);
+const kept = lines.filter((line) => !NS_LINE.test(line));
+if (removedLast) {
+	// Strip the trailing comma from the new final entry (the line just before
+	// the closing `]`), skipping blanks.
+	let lastKeptIdx = kept.length - 1;
+	while (lastKeptIdx >= 0 && /^\s*\]?\s*$/.test(kept[lastKeptIdx])) lastKeptIdx--;
+	if (kept[lastKeptIdx]) kept[lastKeptIdx] = kept[lastKeptIdx].replace(/,\s*$/, "");
+}
+const rewritten = `${source.slice(0, arrayOpen)}${kept.join("\n")}${source.slice(arrayClose + 1)}`;
 writeFileSync(target, rewritten);
-console.log(`[dsh-appearance] 已在 WEB_SETTINGS_NAMESPACES 中添加 ${NS} → ${target}`);
-console.log("[dsh-appearance] 请重启 dsh web 使白名单生效。");
+console.log(`[dsh-appearance] 已从 WEB_SETTINGS_NAMESPACES 中移除 ${NS} → ${target}`);
+console.log("[dsh-appearance] 请重启 dsh web 使变更生效。");

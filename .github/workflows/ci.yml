@@ -81,3 +81,39 @@ jobs:
           chmod +x /tmp/fakebin/dsh
           DSH=/tmp/fakebin/dsh node scripts/install.mjs --dry-run --skip-add --skip-whitelist > /tmp/install-skip.txt
           grep -q '安装完成' /tmp/install-skip.txt
+
+      - name: uninstall script regression test (dry run)
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/uninstall.mjs --dry-run > /tmp/uninstall-dry.txt
+          grep -q '从 profile 移除 bundle' /tmp/uninstall-dry.txt
+          grep -q '移除设置命名空间白名单' /tmp/uninstall-dry.txt
+          grep -q 'dsh plugin --profile' /tmp/uninstall-dry.txt
+          DSH=/tmp/fakebin/dsh node scripts/uninstall.mjs --dry-run --skip-bundle --skip-whitelist > /tmp/uninstall-skip.txt
+          grep -q '卸载完成' /tmp/uninstall-skip.txt
+
+      - name: whitelist remove-mode regression test
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Case 1 — remove the LAST entry: dangling comma of the new final
+          # entry must be stripped, restoring the plain shape.
+          node -e 'const fs=require("fs");fs.writeFileSync("/tmp/wl-last.js", `const WEB_SETTINGS_NAMESPACES = [\n\t"agent-loop",\n\t"ui-theme",\n\t"web-search-deepseek",\n\t"ui-appearance",\n];\n`)'
+          DSH_WHITELIST_FILE=/tmp/wl-last.js node scripts/fix-whitelist.mjs --remove >/dev/null
+          node --check /tmp/wl-last.js
+          grep -q '"web-search-deepseek"' /tmp/wl-last.js
+          grep -vq '"ui-appearance"' /tmp/wl-last.js
+          # the comma after web-search-deepseek must be gone now
+          grep -q '"web-search-deepseek"'$ /tmp/wl-last.js
+
+          # Case 2 — remove a MID-array entry: last line untouched.
+          node -e 'const fs=require("fs");fs.writeFileSync("/tmp/wl-mid.js", `const WEB_SETTINGS_NAMESPACES = [\n\t"agent-loop",\n\t"ui-appearance",\n\t"ui-theme",\n\t"web-search-deepseek"\n];\n`)'
+          DSH_WHITELIST_FILE=/tmp/wl-mid.js node scripts/fix-whitelist.mjs --remove >/dev/null
+          node --check /tmp/wl-mid.js
+          grep -vq '"ui-appearance"' /tmp/wl-mid.js
+          grep -q '"web-search-deepseek"'$ /tmp/wl-mid.js
+
+          # Case 3 — already removed: idempotent no-op.
+          DSH_WHITELIST_FILE=/tmp/wl-mid.js node scripts/fix-whitelist.mjs --remove | grep -q '无需修改'
