@@ -1,0 +1,5 @@
+# dsh-appearance — web profile 的 --patch 覆盖层：
+#   dsh web --patch ./cordis.patch.yml
+- insert:
+    - id: ui-appearance
+      name: 'dsh-appearance'
