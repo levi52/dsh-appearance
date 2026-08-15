@@ -9,6 +9,7 @@
 ![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)
 ![Node >= 18](https://img.shields.io/badge/node-%3E%3D18-blue.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)
+[![CI](https://img.shields.io/github/actions/workflow/status/levi52/dsh-appearance/ci.yml?label=CI)](https://github.com/levi52/dsh-appearance/actions)
 [![Developed with DeepSeek Harness](https://img.shields.io/badge/Built%20with-DeepSeek%20Harness-4d6bfe.svg)](https://www.deepseek.com/harness/)
 
 </div>
@@ -36,17 +37,16 @@
 ### 安装步骤
 
 ```bash
-# 1. 安装到 web profile（包声明了 dsh.bundle，安装后自动追加进 bundles 并激活插件行）
-dsh plugin --profile web add <本目录路径>
+# 1. 一键安装（自动注册 bundle 到 web profile + 开放设置命名空间白名单）：
+npm run install-plugin
+#    等效于手动执行下面两步，也可用 --profile <name> 指定其他 profile：
+#    dsh plugin --profile web add <本目录路径>
+#    npm run fix-whitelist
+#    （提示：本地 link: 安装不会触发生命周期脚本，白名单需执行一次；
+#      registry/npm 安装时 postinstall 会自动尝试。升级/重装
+#      dsh-host-apiproxy 后需重新运行 fix-whitelist。）
 
-# 2. 开放设置命名空间白名单（必须）：向网关的 WEB_SETTINGS_NAMESPACES
-#    加入 "ui-appearance"。插件提供了幂等脚本，一条命令搞定：
-npm run fix-whitelist
-#    ⚠ 本命令在安装插件后（本地 link: 安装不会触发生命周期脚本）需手动执行一次；
-#    若以 registry/npm install 方式安装，postinstall 会尝试自动执行。
-#    ⚠ 升级/重装 dsh-host-apiproxy 后需重新运行。
-
-# 3. 重启 dsh web
+# 2. 重启 dsh web
 ```
 
 > 纯客户端改动（主题色、字体、壁纸设置等）只需**强制刷新浏览器**；宿主侧改动（schema、路由）需要重启。

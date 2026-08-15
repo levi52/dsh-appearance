@@ -51,6 +51,7 @@
     "watch": "node build.mjs --watch",
     "typecheck": "tsc --noEmit",
     "prepare": "node build.mjs",
+    "install-plugin": "node scripts/install.mjs",
     "fix-whitelist": "node scripts/fix-whitelist.mjs",
     "postinstall": "node scripts/fix-whitelist.mjs"
   },

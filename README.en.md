@@ -9,6 +9,7 @@ English · [中文](README.md)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)
 ![Node >= 18](https://img.shields.io/badge/node-%3E%3D18-blue.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)
+[![CI](https://img.shields.io/github/actions/workflow/status/levi52/dsh-appearance/ci.yml?label=CI)](https://github.com/levi52/dsh-appearance/actions)
 [![Developed with DeepSeek Harness](https://img.shields.io/badge/Built%20with-DeepSeek%20Harness-4d6bfe.svg)](https://www.deepseek.com/harness/)
 
 </div>
@@ -36,19 +37,19 @@ English · [中文](README.md)
 ### Steps
 
 ```bash
-# 1. Install into the web profile (the package declares dsh.bundle, so the
-#    install automatically appends it to bundles and activates the plugin row)
-dsh plugin --profile web add <this-directory>
+# 1. One-command install (registers the bundle into the web profile AND opens
+#    the settings namespace whitelist):
+npm run install-plugin
+#    Equivalent to the two manual steps below; pass --profile <name> for other
+#    profiles:
+#    dsh plugin --profile web add <this-directory>
+#    npm run fix-whitelist
+#    (Note: local link: installs do not trigger lifecycle scripts, so the
+#     whitelist must be applied once; registry/npm installs attempt it via
+#     postinstall. Re-run fix-whitelist after upgrading/reinstalling
+#     dsh-host-apiproxy.)
 
-# 2. Open the settings namespace whitelist (required): add "ui-appearance" to
-#    the gateway's WEB_SETTINGS_NAMESPACES. An idempotent script does it:
-npm run fix-whitelist
-#    ⚠ run this manually once after installing (local link: installs do not
-#    trigger lifecycle scripts); with registry/npm installs, postinstall
-#    attempts it automatically.
-#    ⚠ re-run after upgrading/reinstalling dsh-host-apiproxy
-
-# 3. Restart dsh web
+# 2. Restart dsh web
 ```
 
 > Client-only changes (themes, fonts, wallpaper settings, …) only need a **hard browser refresh**; host-side changes (schema, routes) need a restart.
