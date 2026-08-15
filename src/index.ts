@@ -23,6 +23,9 @@ import { randomUUID } from "node:crypto";
 /** Settings namespace owned by the appearance plugin. */
 export const APPEARANCE_SETTINGS_NAMESPACE = "ui-appearance";
 
+/** Plugin name (docs convention: bundle plugins export `name`). */
+export const name = "dsh-appearance";
+
 /** Namespace validation mirroring @deepseek-ai/dsh-settings' pattern. */
 const NAMESPACE_PATTERN = /^[a-z][a-z0-9-]*$/;
 

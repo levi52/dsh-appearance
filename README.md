@@ -1,63 +1,97 @@
-# dsh-appearance
+<div align="center">
 
-DeepSeek Harness Web 外观设置插件：主题预设（Claude / GitHub / 新粗野主义 / 终端）+ 字体设置（界面字体、代码字体、字号），持久化在 Host 设置文档中。
+# 🎨 DeepSeek Harness 外观插件
 
-## 功能
+**DeepSeek Harness Web 的外观设置插件：主题、强调色、字体、背景壁纸，一键个性化你的 Web UI。**
 
-- **主题**：浅色 / 深色 / 跟随系统（内建）+ 四个第三方主题预设，通过 `--dsw-alias-*` token 覆盖实现：
-  - `claude` — Claude 暖米白 + 赤陶橙强调
-  - `github` — GitHub 白底 + 绿强调
-  - `brutalism` — 新粗野主义（奶油底 + 纯黑高对比 + 橙色撞色）
-  - `terminal` — 深黑绿磷光终端风
-- **界面字体**：默认 / 无衬线 / 衬线 / 等宽 / 自定义（覆盖 `--dsw-font-family`）
-- **代码字体**：默认 / JetBrains Mono / Fira Code / Consolas / 自定义（覆盖 `--ds-font-family-code`）
-- **字号**：小 13px / 标准 14px / 大 16px
+[English](README.en.md) · 中文
 
-所有选择写入 `$DSH_HOME/settings.yaml` 的 `ui-appearance:` 段，刷新后自动恢复。
+![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)
+![Node >= 18](https://img.shields.io/badge/node-%3E%3D18-blue.svg)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)
+[![Developed with DeepSeek Harness](https://img.shields.io/badge/Built%20with-DeepSeek%20Harness-4d6bfe.svg)](https://www.deepseek.com/harness/)
 
-## 结构（TypeScript 源码 + 构建产物）
+</div>
 
-```
-dsh-appearance/
-├── src/
-│   ├── index.ts          # Host 侧源码：注册 ui-appearance settings namespace
-│   └── client/index.ts   # 浏览器侧源码：主题注册、设置页、字体应用
-├── lib/                  # 构建产物（node build.mjs 生成，勿手改）
-│   ├── index.js          # Host 侧（ESM）
-│   └── client.js         # 浏览器侧（module-loader bundle 格式）
-├── cordis.patch.yml      # --patch overlay（docs"第一个插件"式本地开发加载）
-├── build.mjs             # 构建脚本（tsc 转译 + client 包裹 loader 格式）
-├── tsconfig.json         # 类型检查配置（npm run typecheck）
-└── package.json
-```
+---
 
-开发命令：`npm run typecheck`（类型检查）、`npm run build`（构建）、`npm run watch`（监听 src 变化自动构建）。
+## 特性
 
-## 安装（web profile）
+- 🎨 **主题**：浅色 / 深色 / 跟随系统 + 9 个预设主题（Claude、GitHub、新粗野主义、终端、Dracula、Tokyo Night、Gruvbox、Solarized、Material），支持**自定义主题**（编辑器调整 5 个关键色，其余自动推导）
+- 🌈 **强调色**：8 个预设色 + 自定义取色器，叠加在任意主题上，自动按 WCAG 计算反色文字
+- 🔤 **字体**：界面字体 / 代码字体（默认、无衬线、衬线、等宽、自定义），支持**系统字体选择器**（直接挑选电脑已装字体），字号三档缩放
+- 🖼️ **背景壁纸**：本地上传或粘贴 URL；**历史壁纸画廊**一键切换、可删除；透明度（最高纯壁纸无遮罩）与模糊度可调
+- 📤 **导出 / 导入**：整套外观配置导出为 JSON，便于备份、分享与换机迁移
+- ⚡ **快捷切换**：侧边栏底部「外观」按钮即时切换主题与强调色，无需打开设置页
+- 💾 **自动持久化**：所有设置保存到 `$DSH_HOME/settings.yaml`，刷新后自动恢复
+- 🧩 **草稿工作流**：修改先入草稿，点「保存并应用」才生效，可随时放弃更改
 
-```sh
-# 1. 安装包到 web profile（转发 pnpm）
-dsh plugin --profile web add <本目录绝对路径>
+## 安装
 
-# 2. 在 $DSH_HOME/profiles/web/cordis.patch.yml 启用
-#    - insert:
-#        - id: ui-appearance
-#          name: 'dsh-appearance'
-#    或使用项目内的 cordis.patch.yml 通过 --patch 加载：
-#    dsh web --patch ./cordis.patch.yml
+### 环境要求
 
-# 3. 放开网关设置白名单（必须）：
-#    编辑 $DSH_HOME/profiles/node_modules/@deepseek-ai/dsh-host-apiproxy/lib/index.js，
-#    在 WEB_SETTINGS_NAMESPACES 数组中添加 "ui-appearance"。
-#    否则浏览器对 ui-appearance 的读写会被网关以 settings-not-exposed 拒绝
-#    （选中态与持久化都不会生效）。注意：升级/重装 @deepseek-ai/dsh-host-apiproxy
-#    后此补丁会被覆盖，需重新添加。
+- [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（`dsh` CLI）已安装并运行过 Web profile
+- Node.js ≥ 18（开发环境为 v22）
 
-# 4. 重启 dsh web 使配置生效
+### 安装步骤
+
+```bash
+# 1. 安装到 web profile（包声明了 dsh.bundle，安装后自动追加进 bundles 并激活插件行）
+dsh plugin --profile web add <本目录路径>
+
+# 2. 开放设置命名空间白名单（必须）：向网关的 WEB_SETTINGS_NAMESPACES
+#    加入 "ui-appearance"。插件提供了幂等脚本，一条命令搞定：
+npm run fix-whitelist
+#    ⚠ 本命令在安装插件后（本地 link: 安装不会触发生命周期脚本）需手动执行一次；
+#    若以 registry/npm install 方式安装，postinstall 会尝试自动执行。
+#    ⚠ 升级/重装 dsh-host-apiproxy 后需重新运行。
+
+# 3. 重启 dsh web
 ```
 
-## 说明
+> 纯客户端改动（主题色、字体、壁纸设置等）只需**强制刷新浏览器**；宿主侧改动（schema、路由）需要重启。
 
-- 第三方主题 id 不写入内建 `ui-theme.preference`（该字段只接受 light/dark/system），本插件用自己的 `ui-appearance.theme` 字段持久化，加载时重新 `setTheme`。
-- 主题注册有重复 id 保护；移除本插件不会覆盖最后持久化的内建偏好。
-- 浏览器侧 bundle 采用与官方 `@deepseek-ai/dsh-client-*` 相同的 `window.__ModuleLoader__.load({id, factory})` 产物格式；`react` 与 `@deepseek-ai/dsh-*` 服务在浏览器模块表中按需解析，无需内联。
+## 界面说明
+
+| 区域 | 说明 |
+|---|---|
+| **主题** | 三态 + 9 预设 + 自定义卡片；自定义卡片点击展开/折叠编辑器，实时调色 |
+| **强调色** | 预设色板圆点 + 自定义取色器，「主题默认」不叠加 |
+| **字体** | 界面字体、代码字体、字号三档（界面缩放） |
+| **背景图片** | 上传 / URL / 历史壁纸画廊切换与删除、透明度、模糊度 |
+| **操作** | 保存并应用、放弃更改、恢复默认、导出、导入 |
+
+## 数据存储
+
+- **设置**：`$DSH_HOME/settings.yaml` 的 `ui-appearance:` 段（小字段，如主题、字体、透明度）
+- **壁纸图片**：`$DSH_HOME/wallpapers/` 目录（上传的图片存为文件，设置只保存服务 URL，不会把大图写进 settings）
+
+## 开发
+
+```bash
+npm run typecheck   # 类型检查
+npm run build       # 构建 lib/ 产物
+npm run watch       # 监听 src/ 变更自动构建
+```
+
+源码位于 `src/`（宿主侧 `index.ts`、浏览器侧 `client/index.ts`），构建产物输出到 `lib/`。
+
+## 工作原理
+
+- 主题通过 `--dsw-alias-*` 颜色 token 覆盖实现；预设主题由「紧凑调色板」自动展开为完整 token 集
+- 壁纸通过宿主路由存储（`/dsh-appearance/*`），浏览器侧用半透明表面层让壁纸透出，色调跟随当前主题
+- 第三方/自定义主题 id 存入 `ui-appearance.theme`（内建 `ui-theme.preference` 只接受 light/dark/system）
+
+## 安全说明
+
+- 所有数据仅存储在本机（`$DSH_HOME`），不上传任何内容
+- 壁纸上传接口只接受图片格式，文件名白名单校验防路径穿越
+- 不采集任何密钥或凭据
+
+## 🤖 AI 声明
+
+本项目使用 [DeepSeek Harness](https://www.deepseek.com/harness/) 开发。
+
+## 许可证
+
+[MIT](LICENSE) © Levi5

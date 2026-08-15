@@ -1,4 +1,6 @@
-# dsh-appearance — web profile 的 --patch 覆盖层：
+# dsh-appearance — bundle patch layer (declared by dsh.bundle.patch).
+# Applied when a profile lists this package in dsh.profile.bundles; also
+# usable directly as a --patch overlay:
 #   dsh web --patch ./cordis.patch.yml
 - insert:
     - id: ui-appearance
