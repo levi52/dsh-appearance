@@ -47,6 +47,11 @@ function fail(message) {
 	process.exit(1);
 }
 
+/** Running as a lifecycle hook (postinstall): degrade to a warning when the
+ *  gateway file is absent, so installs on machines without a booted profile
+ *  do not fail. Manual runs still exit non-zero with the full message. */
+const asLifecycleHook = process.env.npm_lifecycle_event === "postinstall";
+
 let target = null;
 for (const candidate of candidates()) {
 	if (existsSync(candidate)) {
@@ -55,7 +60,13 @@ for (const candidate of candidates()) {
 	}
 }
 if (!target) {
-	fail(`未找到 dsh-host-apiproxy/lib/index.js（$DSH_HOME=${dshHome()}）。请确认 DSH 已安装并初始化过 web profile，或设置 DSH_WHITELIST_FILE 指向该文件。`);
+	const message = `未找到 dsh-host-apiproxy/lib/index.js（$DSH_HOME=${dshHome()}）。请确认 DSH 已安装并初始化过 web profile，或设置 DSH_WHITELIST_FILE 指向该文件。`;
+	if (asLifecycleHook) {
+		console.warn(`[dsh-appearance] ${message}`);
+		console.warn("[dsh-appearance] 跳过（postinstall 环境无网关文件）。安装到已初始化的 DSH 后请手动运行 npm run fix-whitelist。");
+		process.exit(0);
+	}
+	fail(message);
 }
 
 const source = readFileSync(target, "utf8");

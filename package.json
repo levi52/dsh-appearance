@@ -40,14 +40,17 @@
   "files": [
     "lib",
     "src",
+    "scripts",
     "cordis.patch.yml",
     "README.md",
+    "README.en.md",
     "LICENSE"
   ],
   "scripts": {
     "build": "node build.mjs",
     "watch": "node build.mjs --watch",
     "typecheck": "tsc --noEmit",
+    "prepare": "node build.mjs",
     "fix-whitelist": "node scripts/fix-whitelist.mjs",
     "postinstall": "node scripts/fix-whitelist.mjs"
   },

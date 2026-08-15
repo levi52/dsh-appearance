@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [18, 20, 22]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check
+        run: pnpm typecheck
+
+      - name: Build
+        run: pnpm build
+
+      - name: fix-whitelist regression test
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Case 1 — real gateway shape: last entry has NO trailing comma.
+          # The script must append the comma to it, insert the new row, and stay valid JS.
+          node -e 'const fs=require("fs");fs.writeFileSync("/tmp/gw-plain.js", `const WEB_SETTINGS_NAMESPACES = [\n\t"agent-loop",\n\t"shell",\n\t"locale",\n\t"permission",\n\t"ui-conversation",\n\t"ui-theme",\n\t"web-search-deepseek"\n];\n`)'
+          DSH_WHITELIST_FILE=/tmp/gw-plain.js node scripts/fix-whitelist.mjs >/dev/null
+          node --check /tmp/gw-plain.js
+          grep -q '"ui-appearance"' /tmp/gw-plain.js
+          DSH_WHITELIST_FILE=/tmp/gw-plain.js node scripts/fix-whitelist.mjs | grep -q '无需修改'
+
+          # Case 2 — last entry already has a trailing comma: must NOT double it.
+          node -e 'const fs=require("fs");fs.writeFileSync("/tmp/gw-trailing.js", `const WEB_SETTINGS_NAMESPACES = [\n\t"agent-loop",\n\t"shell",\n\t"locale",\n\t"permission",\n\t"ui-conversation",\n\t"ui-theme",\n\t"web-search-deepseek",\n];\n`)'
+          DSH_WHITELIST_FILE=/tmp/gw-trailing.js node scripts/fix-whitelist.mjs >/dev/null
+          node --check /tmp/gw-trailing.js
+          grep -q '"ui-appearance"' /tmp/gw-trailing.js
+          DSH_WHITELIST_FILE=/tmp/gw-trailing.js node scripts/fix-whitelist.mjs | grep -q '无需修改'
+
+          # Case 3 — no gateway file: must fail with a clear message, not crash.
+          if DSH_WHITELIST_FILE=/tmp/does-not-exist.js node scripts/fix-whitelist.mjs >/dev/null 2>&1; then
+            echo "expected failure for missing gateway file, got success" >&2
+            exit 1
+          fi
