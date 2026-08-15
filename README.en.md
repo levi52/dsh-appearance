@@ -93,6 +93,7 @@ Source lives in `src/` (host `index.ts`, browser `client/index.ts`); build outpu
 - Themes override the `--dsw-alias-*` color tokens; presets are authored as compact palettes and expanded into the full token set
 - Wallpapers are stored via host routes (`/dsh-appearance/*`) and shown through a translucent surface layer tinted with the active theme
 - Third-party/custom theme ids are stored in `ui-appearance.theme` (the built-in `ui-theme.preference` only accepts light/dark/system)
+- **Why the whitelist is needed**: think of the DSH gateway as a **doorman with a fixed guest list**. Only the settings on that list (hardcoded at build time) may be read/written by the browser. Our plugin is a new resident — its name is not on the list, so the browser's read/write attempts get stopped at the door (the `settings-not-exposed` error): nothing you click in the settings page sticks, and nothing survives a reload. The `fix-whitelist` script simply adds our name to the doorman's list. However, every upgrade/reinstall of the gateway component swaps in a fresh factory list — our name is gone again, so the script must be re-run.
 
 ## Security
 
