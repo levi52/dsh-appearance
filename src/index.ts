@@ -41,6 +41,8 @@ export interface AppearanceSettings {
 	codeFont: string;
 	codeFontCustom: string;
 	fontSize: string;
+	accent: string;
+	accentCustom: string;
 }
 
 /** Durable appearance schema; also the wire envelope the browser scope validates against. */
@@ -51,6 +53,8 @@ export const AppearanceSettingsSchema = z.object({
 	codeFont: z.string().default("default"),
 	codeFontCustom: z.string().default(""),
 	fontSize: z.string().default("normal"),
+	accent: z.string().default("none"),
+	accentCustom: z.string().default(""),
 });
 
 /** Minimal host Cordis context surface used by this plugin. */
