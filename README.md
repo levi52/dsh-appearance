@@ -37,14 +37,10 @@
 ### 安装步骤
 
 ```bash
-# 1. 一键安装（自动注册 bundle 到 web profile + 开放设置命名空间白名单）：
+# 1. 一键安装（把 bundle 注册到 web profile）：
 npm run install-plugin
-#    等效于手动执行下面两步，也可用 --profile <name> 指定其他 profile：
+#    等效于手动执行下面一步，也可用 --profile <name> 指定其他 profile：
 #    dsh plugin --profile web add <本目录路径>
-#    npm run fix-whitelist
-#    （提示：本地 link: 安装不会触发生命周期脚本，白名单需执行一次；
-#      registry/npm 安装时 postinstall 会自动尝试。升级/重装
-#      dsh-host-apiproxy 后需重新运行 fix-whitelist。）
 
 # 2. 重启 dsh web
 ```
@@ -53,8 +49,8 @@ npm run install-plugin
 
 ```bash
 npm run uninstall-plugin
-#    移除 bundle 并清理网关白名单；用户数据（settings.yaml 的 ui-appearance
-#    段与 wallpapers/ 目录）会保留，如需彻底清除请手动删除。
+#    移除 bundle；用户数据（settings.yaml 的 ui-appearance 段与
+#    wallpapers/ 目录）会保留，如需彻底清除请手动删除。
 ```
 
 > 纯客户端改动（主题色、字体、壁纸设置等）只需**强制刷新浏览器**；宿主侧改动（schema、路由）需要重启。
@@ -89,7 +85,7 @@ npm run watch       # 监听 src/ 变更自动构建
 - 主题通过 `--dsw-alias-*` 颜色 token 覆盖实现；预设主题由「紧凑调色板」自动展开为完整 token 集
 - 壁纸通过宿主路由存储（`/dsh-appearance/*`），浏览器侧用半透明表面层让壁纸透出，色调跟随当前主题
 - 第三方/自定义主题 id 存入 `ui-appearance.theme`（内建 `ui-theme.preference` 只接受 light/dark/system）
-- **为什么需要白名单**：打个比方——DSH 的网关像一个**小区门卫**，手里有一份「允许进出的住户名单」。名单是 DSH 出厂时就写死的，只有名单上列出的设置项，浏览器才允许读写。我们的插件相当于新搬来的住户，名字不在名单上，所以浏览器想读写它的设置时会被门卫拦下来（报 `settings-not-exposed`），表现为：设置页里怎么点都不生效、刷新后恢复不了。`fix-whitelist` 脚本就是帮我们把名字**加进门卫的名单**。但每次升级/重装 DSH 的网关组件，门卫会换一份新的出厂名单，我们的名字又没了，所以要再跑一次脚本。
+- **设置如何暴露给浏览器**：宿主半启动时通过 `ctx.settings.register` 注册 `ui-appearance` 设置命名空间；DSH 的网关会向浏览器暴露**所有已注册**的命名空间（注册即暴露，不存在需要手动维护的「白名单」）。因此安装时**无需修改任何 DSH 文件**，只要 bundle 已加入 profile 且宿主半正常启动，设置页就能读写 `ui-appearance` 并持久化到 `$DSH_HOME/settings.yaml`。若设置不生效，请先确认 bundle 已注册（重新执行安装并重启 dsh web），而不是去改网关代码。
 
 ## 安全说明
 

@@ -32,39 +32,6 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: fix-whitelist regression test
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          # Case 1 — real gateway shape: last entry has NO trailing comma.
-          # The script must append the comma to it, insert the new row, and stay valid JS.
-          node -e 'const fs=require("fs");fs.writeFileSync("/tmp/gw-plain.js", `const WEB_SETTINGS_NAMESPACES = [\n\t"agent-loop",\n\t"shell",\n\t"locale",\n\t"permission",\n\t"ui-conversation",\n\t"ui-theme",\n\t"web-search-deepseek"\n];\n`)'
-          DSH_WHITELIST_FILE=/tmp/gw-plain.js node scripts/fix-whitelist.mjs >/dev/null
-          node --check /tmp/gw-plain.js
-          grep -q '"ui-appearance"' /tmp/gw-plain.js
-          DSH_WHITELIST_FILE=/tmp/gw-plain.js node scripts/fix-whitelist.mjs | grep -q '无需修改'
-
-          # Case 2 — last entry already has a trailing comma: must NOT double it.
-          node -e 'const fs=require("fs");fs.writeFileSync("/tmp/gw-trailing.js", `const WEB_SETTINGS_NAMESPACES = [\n\t"agent-loop",\n\t"shell",\n\t"locale",\n\t"permission",\n\t"ui-conversation",\n\t"ui-theme",\n\t"web-search-deepseek",\n];\n`)'
-          DSH_WHITELIST_FILE=/tmp/gw-trailing.js node scripts/fix-whitelist.mjs >/dev/null
-          node --check /tmp/gw-trailing.js
-          grep -q '"ui-appearance"' /tmp/gw-trailing.js
-          DSH_WHITELIST_FILE=/tmp/gw-trailing.js node scripts/fix-whitelist.mjs | grep -q '无需修改'
-
-          # Case 3 — no gateway file: must fail with a clear message, not crash.
-          if DSH_WHITELIST_FILE=/tmp/does-not-exist.js node scripts/fix-whitelist.mjs >/dev/null 2>&1; then
-            echo "expected failure for missing gateway file, got success" >&2
-            exit 1
-          fi
-
-          # Case 4 — postinstall lifecycle: missing gateway degrades to a
-          # warning and exit 0, so installs without a booted profile succeed.
-          if ! DSH_WHITELIST_FILE=/tmp/does-not-exist.js npm_lifecycle_event=postinstall node scripts/fix-whitelist.mjs >/dev/null 2>&1; then
-            echo "expected postinstall context to succeed, got failure" >&2
-            exit 1
-          fi
-
       - name: install script regression test (dry run)
         shell: bash
         run: |
@@ -72,14 +39,13 @@ jobs:
           # --dry-run must print the dsh invocation without executing it.
           node scripts/install.mjs --dry-run > /tmp/install-dry.txt
           grep -q '注册 bundle 到 profile' /tmp/install-dry.txt
-          grep -q '开放设置命名空间白名单' /tmp/install-dry.txt
           grep -q 'dsh plugin --profile' /tmp/install-dry.txt
-          # --skip-add + --skip-whitelist + --dry-run: no real dsh needed,
-          # but the script still resolves one — point it at a fake binary.
+          # --skip-add + --dry-run: no real dsh needed, but the script still
+          # resolves one — point it at a fake binary.
           mkdir -p /tmp/fakebin
           printf '#!/bin/sh\nexit 0\n' > /tmp/fakebin/dsh
           chmod +x /tmp/fakebin/dsh
-          DSH=/tmp/fakebin/dsh node scripts/install.mjs --dry-run --skip-add --skip-whitelist > /tmp/install-skip.txt
+          DSH=/tmp/fakebin/dsh node scripts/install.mjs --dry-run --skip-add > /tmp/install-skip.txt
           grep -q '安装完成' /tmp/install-skip.txt
 
       - name: uninstall script regression test (dry run)
@@ -88,32 +54,6 @@ jobs:
           set -euo pipefail
           node scripts/uninstall.mjs --dry-run > /tmp/uninstall-dry.txt
           grep -q '从 profile 移除 bundle' /tmp/uninstall-dry.txt
-          grep -q '移除设置命名空间白名单' /tmp/uninstall-dry.txt
           grep -q 'dsh plugin --profile' /tmp/uninstall-dry.txt
-          DSH=/tmp/fakebin/dsh node scripts/uninstall.mjs --dry-run --skip-bundle --skip-whitelist > /tmp/uninstall-skip.txt
+          DSH=/tmp/fakebin/dsh node scripts/uninstall.mjs --dry-run --skip-bundle > /tmp/uninstall-skip.txt
           grep -q '卸载完成' /tmp/uninstall-skip.txt
-
-      - name: whitelist remove-mode regression test
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          # Case 1 — remove the LAST entry: dangling comma of the new final
-          # entry must be stripped, restoring the plain shape.
-          node -e 'const fs=require("fs");fs.writeFileSync("/tmp/wl-last.js", `const WEB_SETTINGS_NAMESPACES = [\n\t"agent-loop",\n\t"ui-theme",\n\t"web-search-deepseek",\n\t"ui-appearance",\n];\n`)'
-          DSH_WHITELIST_FILE=/tmp/wl-last.js node scripts/fix-whitelist.mjs --remove >/dev/null
-          node --check /tmp/wl-last.js
-          grep -q '"web-search-deepseek"' /tmp/wl-last.js
-          grep -vq '"ui-appearance"' /tmp/wl-last.js
-          # the comma after web-search-deepseek must be gone now
-          grep -q '"web-search-deepseek"'$ /tmp/wl-last.js
-
-          # Case 2 — remove a MID-array entry: last line untouched.
-          node -e 'const fs=require("fs");fs.writeFileSync("/tmp/wl-mid.js", `const WEB_SETTINGS_NAMESPACES = [\n\t"agent-loop",\n\t"ui-appearance",\n\t"ui-theme",\n\t"web-search-deepseek"\n];\n`)'
-          DSH_WHITELIST_FILE=/tmp/wl-mid.js node scripts/fix-whitelist.mjs --remove >/dev/null
-          node --check /tmp/wl-mid.js
-          grep -vq '"ui-appearance"' /tmp/wl-mid.js
-          grep -q '"web-search-deepseek"'$ /tmp/wl-mid.js
-
-          # Case 3 — already removed: idempotent no-op.
-          DSH_WHITELIST_FILE=/tmp/wl-mid.js node scripts/fix-whitelist.mjs --remove | grep -q '无需修改'

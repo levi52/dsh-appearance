@@ -37,17 +37,11 @@ English · [中文](README.md)
 ### Steps
 
 ```bash
-# 1. One-command install (registers the bundle into the web profile AND opens
-#    the settings namespace whitelist):
+# 1. One-command install (registers the bundle into the web profile):
 npm run install-plugin
-#    Equivalent to the two manual steps below; pass --profile <name> for other
-#    profiles:
+#    Equivalent to the single manual step below; pass --profile <name> for
+#    other profiles:
 #    dsh plugin --profile web add <this-directory>
-#    npm run fix-whitelist
-#    (Note: local link: installs do not trigger lifecycle scripts, so the
-#     whitelist must be applied once; registry/npm installs attempt it via
-#     postinstall. Re-run fix-whitelist after upgrading/reinstalling
-#     dsh-host-apiproxy.)
 
 # 2. Restart dsh web
 ```
@@ -56,9 +50,9 @@ npm run install-plugin
 
 ```bash
 npm run uninstall-plugin
-#    Removes the bundle and cleans the gateway whitelist. Your user data (the
-#    ui-appearance section of settings.yaml and the wallpapers/ directory) is
-#    kept — delete it manually if you want it gone.
+#    Removes the bundle. Your user data (the ui-appearance section of
+#    settings.yaml and the wallpapers/ directory) is kept — delete it manually
+#    if you want it gone.
 ```
 
 > Client-only changes (themes, fonts, wallpaper settings, …) only need a **hard browser refresh**; host-side changes (schema, routes) need a restart.
@@ -93,7 +87,7 @@ Source lives in `src/` (host `index.ts`, browser `client/index.ts`); build outpu
 - Themes override the `--dsw-alias-*` color tokens; presets are authored as compact palettes and expanded into the full token set
 - Wallpapers are stored via host routes (`/dsh-appearance/*`) and shown through a translucent surface layer tinted with the active theme
 - Third-party/custom theme ids are stored in `ui-appearance.theme` (the built-in `ui-theme.preference` only accepts light/dark/system)
-- **Why the whitelist is needed**: think of the DSH gateway as a **doorman with a fixed guest list**. Only the settings on that list (hardcoded at build time) may be read/written by the browser. Our plugin is a new resident — its name is not on the list, so the browser's read/write attempts get stopped at the door (the `settings-not-exposed` error): nothing you click in the settings page sticks, and nothing survives a reload. The `fix-whitelist` script simply adds our name to the doorman's list. However, every upgrade/reinstall of the gateway component swaps in a fresh factory list — our name is gone again, so the script must be re-run.
+- **How settings reach the browser**: on startup the Host half registers the `ui-appearance` settings namespace via `ctx.settings.register`; the DSH gateway exposes **every registered namespace** to the browser (registration IS the exposure — there is no whitelist to maintain). So installation never requires editing DSH files: once the bundle is mounted and the Host half is running, the settings page can read/write `ui-appearance` and persist it to `$DSH_HOME/settings.yaml`. If settings do not stick, verify the bundle is registered (re-run the install and restart dsh web) rather than patching gateway code.
 
 ## Security
 

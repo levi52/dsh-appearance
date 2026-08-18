@@ -5,9 +5,7 @@
  * Reverses the installer flow for a DSH web profile:
  *   1. `dsh plugin --profile <name> remove dsh-appearance` — removes the
  *      bundle from node_modules and the profile's bundles list;
- *   2. the whitelist fixer in --remove mode — drops "ui-appearance" from the
- *      gateway's WEB_SETTINGS_NAMESPACES;
- *   3. prints the restart reminder and notes that user data is kept.
+ *   2. prints the restart reminder and notes that user data is kept.
  *
  * User data (the `ui-appearance:` section of $DSH_HOME/settings.yaml and the
  * $DSH_HOME/wallpapers/ files) is intentionally NOT deleted — uninstalling the
@@ -17,8 +15,7 @@
  * Usage:
  *   node scripts/uninstall.mjs                   # remove from profile `web`
  *   node scripts/uninstall.mjs --profile demo    # another profile name
- *   node scripts/uninstall.mjs --skip-bundle     # whitelist removal only
- *   node scripts/uninstall.mjs --skip-whitelist  # bundle removal only
+ *   node scripts/uninstall.mjs --skip-bundle     # skip the dsh plugin remove
  *   node scripts/uninstall.mjs --dry-run         # print commands, don't run
  */
 import { existsSync } from "node:fs";
@@ -40,7 +37,6 @@ function valueOf(flag) {
 }
 const profile = valueOf("--profile") || "web";
 const skipBundle = args.includes("--skip-bundle");
-const skipWhitelist = args.includes("--skip-whitelist");
 const dryRun = args.includes("--dry-run");
 
 /* ------------------------------------------------------------------ */
@@ -68,6 +64,7 @@ function findDsh() {
 	const explicit = process.env.DSH || process.env.DSH_CLI;
 	if (explicit && existsSync(explicit)) return explicit;
 	if (isWin) {
+		// `dsh` may resolve to a shim without extension; try both spellings.
 		for (const name of ["dsh.cmd", "dsh"]) {
 			const which = spawnSync("where", [name], { shell: true, encoding: "utf8" });
 			if (which.status === 0 && which.stdout.trim()) {
@@ -122,13 +119,7 @@ if (!skipBundle) {
 	else run("从 profile 移除 bundle", dsh, rmArgs, { shell: true });
 }
 
-if (!skipWhitelist) {
-	const fixer = join(root, "scripts", "fix-whitelist.mjs");
-	run("移除设置命名空间白名单", process.execPath, [fixer, "--remove"]);
-}
-
 console.log("\n[dsh-appearance] ✔ 卸载完成。");
 console.log("[dsh-appearance] 下一步：重启 dsh web 使变更生效。");
 console.log("[dsh-appearance] 提示：你的用户数据已保留（settings.yaml 的 ui-appearance 段与 wallpapers/ 目录）。如需彻底清除，请手动删除它们。");
 if (skipBundle) console.log("[dsh-appearance] 提示：本次跳过了 bundle 移除（--skip-bundle），如尚未移除请重新运行不带该参数。");
-if (skipWhitelist) console.log("[dsh-appearance] 提示：本次跳过了白名单移除（--skip-whitelist），若白名单仍需移除请重新运行不带该参数。");

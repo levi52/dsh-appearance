@@ -5,15 +5,18 @@
  * Runs the full installation flow for a DSH web profile:
  *   1. `dsh plugin --profile <name> add <plugin-dir>` — registers the bundle
  *      (forwarded to pnpm with -w for the workspace root);
- *   2. the settings-namespace whitelist fixer (scripts/fix-whitelist.mjs);
- *   3. prints the final "restart dsh web" reminder.
+ *   2. prints the final "restart dsh web" reminder.
+ *
+ * No settings-namespace whitelist patch is needed: mounting the bundle makes
+ * the Host half run, which registers the `ui-appearance` namespace; DSH's
+ * gateway exposes every registered namespace to the browser automatically
+ * (registration IS the exposure).
  *
  * Usage:
  *   node scripts/install.mjs                      # install into profile `web`
  *   node scripts/install.mjs --profile demo       # another profile name
  *   node scripts/install.mjs --dir /path/to/dsh-appearance
- *   node scripts/install.mjs --skip-add           # whitelist only
- *   node scripts/install.mjs --skip-whitelist     # bundle only
+ *   node scripts/install.mjs --skip-add           # skip the dsh plugin add
  *   node scripts/install.mjs --dry-run            # print commands, don't run
  *
  * The dsh CLI is located via, in order: $DSH / $DSH_CLI, `dsh`/`dsh.cmd` on
@@ -39,7 +42,6 @@ function valueOf(flag) {
 const profile = valueOf("--profile") || "web";
 const pluginDir = valueOf("--dir") || root;
 const skipAdd = args.includes("--skip-add");
-const skipWhitelist = args.includes("--skip-whitelist");
 const dryRun = args.includes("--dry-run");
 
 /* ------------------------------------------------------------------ */
@@ -122,12 +124,6 @@ if (!skipAdd) {
 	else run("注册 bundle 到 profile", dsh, addArgs, { shell: true });
 }
 
-if (!skipWhitelist) {
-	const fixer = join(root, "scripts", "fix-whitelist.mjs");
-	run("开放设置命名空间白名单", process.execPath, [fixer]);
-}
-
 console.log("\n[dsh-appearance] ✔ 安装完成。");
 console.log("[dsh-appearance] 下一步：重启 dsh web 使配置生效（dsh web 或 dsh --profile " + profile + "）。");
 if (skipAdd) console.log("[dsh-appearance] 提示：本次跳过了 bundle 注册（--skip-add），如尚未安装请重新运行不带该参数。");
-if (skipWhitelist) console.log("[dsh-appearance] 提示：本次跳过了白名单（--skip-whitelist），若网关白名单未开放请重新运行不带该参数。");
